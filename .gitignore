@@ -67,3 +67,11 @@ crashlytics-build.properties
 
 # macOS
 .DS_Store
+
+# Build outputs
+/[Bb]uild*/
+.utmp/
+
+# macOS
+.DS_Store
+.vscode/

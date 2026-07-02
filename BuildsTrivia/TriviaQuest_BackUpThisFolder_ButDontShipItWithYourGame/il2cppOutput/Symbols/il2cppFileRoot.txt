@@ -1,1 +1,0 @@
-/Users/caglarcoban/Trivia Game/Library/Bee/artifacts/Android/il2cppOutput/cpp
