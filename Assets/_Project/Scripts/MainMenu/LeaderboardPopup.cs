@@ -7,26 +7,34 @@ public class LeaderboardPopup : MonoBehaviour
 {
     [SerializeField] private GameObject popupRoot;
     [SerializeField] private ScrollRect scrollRect;
-    [SerializeField] private Transform contentParent;
+    [SerializeField] private RectTransform content;
     [SerializeField] private LeaderboardItem itemPrefab;
     [SerializeField] private GameConfig config;
     [SerializeField] private GameObject loadingIndicator;
 
-    [Header("Infinite Scroll")]
-    [Tooltip("Scroll pozisyonu bu değerin altına inince yeni sayfa yüklenir (0 = en alt, 1 = en üst)")]
-    [SerializeField] private float loadMoreThreshold = 0.2f;
+    [Header("Virtualization")]
+    [SerializeField] private float itemHeight = 100f;
+    [SerializeField] private int poolSize = 12; // ekranda görünen + buffer
+    [SerializeField] private int pageSize = 10; // API'nin bir sayfada döndürdüğü kayıt sayısı
+
+    // Recycled pool: sabit sayıda GameObject
+    private readonly List<RectTransform> _pooledItems = new List<RectTransform>();
+    private readonly List<LeaderboardItem> _pooledScripts = new List<LeaderboardItem>();
+
+    // Veri cache: sayfa numarası -> o sayfanın verileri
+    private readonly Dictionary<int, LeaderboardEntry[]> _pageCache = new Dictionary<int, LeaderboardEntry[]>();
+    private readonly HashSet<int> _pagesLoading = new HashSet<int>();
 
     private IApiService _apiService;
-    private readonly List<LeaderboardItem> _pooledItems = new List<LeaderboardItem>();
-
-    private int _nextPage = 0;
-    private bool _isLoading = false;
-    private bool _isLastPage = false;
+    private int _totalKnownCount = int.MaxValue; // is_last gelene kadar bilinmez
+    private bool _hasReachedEnd = false;
+    private int _lastFirstVisibleIndex = -1;
 
     private void Awake()
     {
         _apiService = new ApiService(config);
         popupRoot.SetActive(false);
+        CreatePool();
     }
 
     private void OnEnable()
@@ -39,17 +47,39 @@ public class LeaderboardPopup : MonoBehaviour
         scrollRect.onValueChanged.RemoveListener(OnScrollChanged);
     }
 
+    // --- Pool Oluşturma (bir kere, sabit sayıda) ---
+    private void CreatePool()
+    {
+        for (int i = 0; i < poolSize; i++)
+        {
+            LeaderboardItem item = Instantiate(itemPrefab, content);
+            RectTransform rt = item.GetComponent<RectTransform>();
+
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 1f);
+
+            item.gameObject.SetActive(false);
+            _pooledItems.Add(rt);
+            _pooledScripts.Add(item);
+        }
+    }
+
     public void Open()
     {
         popupRoot.SetActive(true);
 
         // Reset state
-        _nextPage = 0;
-        _isLastPage = false;
-        _isLoading = false;
-        ClearList();
+        _pageCache.Clear();
+        _pagesLoading.Clear();
+        _hasReachedEnd = false;
+        _totalKnownCount = int.MaxValue;
+        _lastFirstVisibleIndex = -1;
 
-        LoadNextPage();
+        scrollRect.verticalNormalizedPosition = 1f;
+        content.anchoredPosition = Vector2.zero;
+
+        LoadPageIfNeeded(0);
     }
 
     public void Close()
@@ -57,81 +87,137 @@ public class LeaderboardPopup : MonoBehaviour
         popupRoot.SetActive(false);
     }
 
-    private void OnScrollChanged(Vector2 normalizedPos)
+    // --- Scroll Değiştiğinde: Hangi item'lar görünür hesapla, recycle et ---
+    private void OnScrollChanged(Vector2 _)
     {
-        if (_isLoading || _isLastPage) return;
+        RefreshVisibleItems();
+    }
 
-        // normalizedPos.y: 1 = en üstte, 0 = en altta
-        if (scrollRect.verticalNormalizedPosition <= loadMoreThreshold)
+    private void RefreshVisibleItems()
+    {
+        float viewportHeight = scrollRect.viewport.rect.height;
+        float scrollY = content.anchoredPosition.y; // 0'dan başlayıp aşağı indikçe artar (pozitif)
+
+        int firstVisibleIndex = Mathf.Max(0, Mathf.FloorToInt(scrollY / itemHeight) - 2); // 2 item buffer üstte
+
+        if (firstVisibleIndex == _lastFirstVisibleIndex) 
         {
-            LoadNextPage();
+            // Yine de yeni sayfa gerekebilir, kontrol et
+            EnsurePagesForRange(firstVisibleIndex, poolSize);
+            return;
+        }
+        _lastFirstVisibleIndex = firstVisibleIndex;
+
+        for (int slot = 0; slot < _pooledItems.Count; slot++)
+        {
+            int dataIndex = firstVisibleIndex + slot;
+
+            if (_hasReachedEnd && dataIndex >= _totalKnownCount)
+            {
+                _pooledScripts[slot].gameObject.SetActive(false);
+                continue;
+            }
+
+            RectTransform rt = _pooledItems[slot];
+            rt.anchoredPosition = new Vector2(0, -dataIndex * itemHeight);
+
+            LeaderboardEntry entry = GetEntryAt(dataIndex);
+            if (entry != null)
+            {
+                _pooledScripts[slot].gameObject.SetActive(true);
+                _pooledScripts[slot].Setup(entry);
+            }
+            else
+            {
+                // Veri henüz yok (yükleniyor) - gizle ya da placeholder göster
+                _pooledScripts[slot].gameObject.SetActive(false);
+            }
+        }
+
+        EnsurePagesForRange(firstVisibleIndex, poolSize);
+    }
+
+    // --- Belirli bir index aralığı için gereken sayfaları yükle ---
+    private void EnsurePagesForRange(int startIndex, int count)
+    {
+        int firstPage = Mathf.Max(0, startIndex / pageSize);
+        int lastPage = (startIndex + count) / pageSize;
+
+        for (int page = firstPage; page <= lastPage; page++)
+        {
+            LoadPageIfNeeded(page);
         }
     }
 
-    private void LoadNextPage()
+    private void LoadPageIfNeeded(int page)
     {
-        if (_isLoading || _isLastPage) return;
+        if (page < 0) return;
+        if (_pageCache.ContainsKey(page)) return;
+        if (_pagesLoading.Contains(page)) return;
+        if (_hasReachedEnd && page * pageSize >= _totalKnownCount) return;
 
-        _isLoading = true;
+        _pagesLoading.Add(page);
+
         if (loadingIndicator != null)
             loadingIndicator.SetActive(true);
 
-        StartCoroutine(_apiService.GetLeaderboard(_nextPage, OnLeaderboardLoaded, OnError));
+        StartCoroutine(_apiService.GetLeaderboard(page, 
+            result => OnPageLoaded(page, result), 
+            error => OnPageError(page, error)));
     }
 
-    private void OnLeaderboardLoaded(LeaderboardPage result)
+    private void OnPageLoaded(int page, LeaderboardPage result)
     {
-        _isLoading = false;
+        _pagesLoading.Remove(page);
+        _pageCache[page] = result.data;
+
+        if (result.is_last)
+        {
+            _hasReachedEnd = true;
+            _totalKnownCount = page * pageSize + result.data.Length;
+            UpdateContentHeight();
+        }
+        else if (_totalKnownCount == int.MaxValue)
+        {
+            // Henüz son sayfa bilinmiyor, content'i "tahmini" büyüklükte tut
+            UpdateContentHeight();
+        }
+
+        if (_pagesLoading.Count == 0 && loadingIndicator != null)
+            loadingIndicator.SetActive(false);
+
+        _lastFirstVisibleIndex = -1; // zorla yenile
+        RefreshVisibleItems();
+    }
+
+    private void OnPageError(int page, string error)
+    {
+        _pagesLoading.Remove(page);
         if (loadingIndicator != null)
             loadingIndicator.SetActive(false);
 
-        _isLastPage = result.is_last;
-        _nextPage = result.page + 1;
-
-        AppendItems(result.data);
+        Debug.LogError($"Leaderboard page {page} load failed: {error}");
     }
 
-    private void OnError(string error)
+    private LeaderboardEntry GetEntryAt(int dataIndex)
     {
-        _isLoading = false;
-        if (loadingIndicator != null)
-            loadingIndicator.SetActive(false);
+        int page = dataIndex / pageSize;
+        int indexInPage = dataIndex % pageSize;
 
-        Debug.LogError($"Leaderboard load failed: {error}");
-    }
-
-    // Yeni gelen verileri listenin SONUNA ekler (üzerine yazmaz)
-    private void AppendItems(LeaderboardEntry[] entries)
-    {
-        foreach (var entry in entries)
+        if (_pageCache.TryGetValue(page, out var entries) && indexInPage < entries.Length)
         {
-            LeaderboardItem item = GetOrCreateItem();
-            item.gameObject.SetActive(true);
-            item.Setup(entry);
+            return entries[indexInPage];
         }
+        return null;
     }
 
-    private LeaderboardItem GetOrCreateItem()
+    private void UpdateContentHeight()
     {
-        // Havuzda kullanılmayan (inactive) bir item var mı bak
-        foreach (var pooled in _pooledItems)
-        {
-            if (!pooled.gameObject.activeSelf)
-                return pooled;
-        }
+        int estimatedCount = _hasReachedEnd 
+            ? _totalKnownCount 
+            : (_pageCache.Count * pageSize) + pageSize; // en az bir sayfa daha varmış gibi davran
 
-        LeaderboardItem newItem = Instantiate(itemPrefab, contentParent);
-        _pooledItems.Add(newItem);
-        return newItem;
-    }
-
-    private void ClearList()
-    {
-        foreach (var item in _pooledItems)
-        {
-            item.gameObject.SetActive(false);
-        }
-
-        scrollRect.verticalNormalizedPosition = 1f; // en üste sar
+        float height = estimatedCount * itemHeight;
+        content.sizeDelta = new Vector2(content.sizeDelta.x, height);
     }
 }
