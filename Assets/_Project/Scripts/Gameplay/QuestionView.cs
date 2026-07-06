@@ -3,17 +3,22 @@ using System;
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 using UnityEngine.SceneManagement;
 
 public class QuestionView : MonoBehaviour
 {
     [SerializeField] private TMP_Text questionText;
     [SerializeField] private AnswerButton[] answerButtons;
-    [SerializeField] private GameObject gameOverPanel;
-    [SerializeField] private TMP_Text finalScoreText;
+    [SerializeField] private Transform gameOverParent; // Canvas_GameOverPanel referansı
     [SerializeField] private float resultDisplayDuration = 1.2f;
 
     public event Action<int> OnAnswerSelected;
+
+    private GameObject _gameOverInstance;
+    private TMP_Text _finalScoreText;
 
     private void Awake()
     {
@@ -24,9 +29,19 @@ public class QuestionView : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        if (_gameOverInstance != null)
+        {
+            Addressables.ReleaseInstance(_gameOverInstance);
+        }
+    }
+
     public void Display(Question question)
     {
-        gameOverPanel.SetActive(false);
+        if (_gameOverInstance != null)
+            _gameOverInstance.SetActive(false);
+
         questionText.text = question.question;
 
         for (int i = 0; i < answerButtons.Length; i++)
@@ -59,17 +74,56 @@ public class QuestionView : MonoBehaviour
 
     public void ShowGameOver(int finalScore)
     {
-        gameOverPanel.SetActive(true);
-        finalScoreText.text = $"Final Score: {finalScore}";
+        StartCoroutine(ShowGameOverRoutine(finalScore));
+    }
+
+    // Örnek Game Over çağırma Coroutine'i
+    // İçeriye int (tam sayı) bir skor veya bool bir durum geliyorsa buraya eklemelisin.
+    // Ben örnek olarak "int score" yazdım, 77. satırda ne gidiyorsa onun tipini yazmalısın.
+    private System.Collections.IEnumerator ShowGameOverRoutine(int score) // Parametre olarak final skoru aldığını varsayıyorum
+    {
+        var handle = UnityEngine.AddressableAssets.Addressables.InstantiateAsync("GameOverPanel"); 
+        
+        yield return handle;
+
+        if (handle.Status == UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationStatus.Succeeded)
+        {
+            GameObject gameOverObj = handle.Result;
+            gameOverObj.transform.SetParent(this.transform.root, false); 
+            
+            // YENİ EKLENEN KISIM: Skoru Game Over paneline gönderiyoruz
+            GameOverView view = gameOverObj.GetComponent<GameOverView>();
+            if (view != null)
+            {
+                view.Setup(score); // final score'u panele iletiyoruz
+            }
+        }
+        else
+        {
+            Debug.LogError("GameOverPanel yüklenemedi!");
+        }
     }
 
     public void RestartGame()
     {
-        SceneManager.LoadScene(SceneNames.GamePlay);
+        StartCoroutine(LoadSceneAsync(SceneNames.GamePlay));
     }
 
     public void GoToMainMenu()
     {
-        SceneManager.LoadScene(SceneNames.MainMenu);
+        StartCoroutine(LoadSceneAsync(SceneNames.MainMenu));
+    }
+
+    private IEnumerator LoadSceneAsync(string sceneAddress)
+    {
+        AsyncOperationHandle<SceneInstance> handle =
+            Addressables.LoadSceneAsync(sceneAddress, LoadSceneMode.Single);
+
+        yield return handle;
+
+        if (handle.Status != AsyncOperationStatus.Succeeded)
+        {
+            Debug.LogError($"Scene load failed: {sceneAddress}");
+        }
     }
 }

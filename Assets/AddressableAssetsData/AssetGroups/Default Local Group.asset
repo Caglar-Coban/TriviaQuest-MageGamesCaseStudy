@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Default Local Group
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Default Local Group
+  m_GUID: 8632cbef2e97b4b4d9a5edc14dd0a605
+  m_SerializeEntries:
+  - m_GUID: 02ae1f0f5c4004745b79eaab6700809f
+    m_Address: GameOverPanel
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0d090f1ae1c964e9980d9b223c8994d1
+    m_Address: GamePlay
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 61a8e2d466dba40f5a0763a39f0f2efa
+    m_Address: LeaderboardPopup
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b84d4fca2570148e985935cbb4724ce2
+    m_Address: GameplayPrefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: f4faaef5699e04b9289ee69c0df574a3, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: a0fb6dac3bfba4ddeb375a9defcd5de8, type: 2}
+    - {fileID: 11400000, guid: 046c6756dc18e4fdcb9e9f9cf74e9b0a, type: 2}

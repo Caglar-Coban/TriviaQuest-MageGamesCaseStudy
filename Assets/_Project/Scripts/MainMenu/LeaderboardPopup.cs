@@ -84,7 +84,7 @@ public class LeaderboardPopup : MonoBehaviour
 
     public void Close()
     {
-        popupRoot.SetActive(false);
+        UnityEngine.AddressableAssets.Addressables.ReleaseInstance(this.gameObject);
     }
 
     // --- Scroll Değiştiğinde: Hangi item'lar görünür hesapla, recycle et ---
@@ -98,7 +98,8 @@ public class LeaderboardPopup : MonoBehaviour
         float viewportHeight = scrollRect.viewport.rect.height;
         float scrollY = content.anchoredPosition.y; // 0'dan başlayıp aşağı indikçe artar (pozitif)
 
-        int firstVisibleIndex = Mathf.Max(0, Mathf.FloorToInt(scrollY / itemHeight) - 2); // 2 item buffer üstte
+        // GÜNCELLEME: -1 yaparak 1 item üstte, 1 item altta yedek (buffer) bırakıyoruz
+        int firstVisibleIndex = Mathf.Max(0, Mathf.FloorToInt(scrollY / itemHeight) - 1); 
 
         if (firstVisibleIndex == _lastFirstVisibleIndex) 
         {
@@ -124,30 +125,32 @@ public class LeaderboardPopup : MonoBehaviour
             LeaderboardEntry entry = GetEntryAt(dataIndex);
             if (entry != null)
             {
+                // Veri var, normal gösterim
                 _pooledScripts[slot].gameObject.SetActive(true);
                 _pooledScripts[slot].Setup(entry);
             }
             else
             {
-                // Veri henüz yok (yükleniyor) - gizle ya da placeholder göster
-                _pooledScripts[slot].gameObject.SetActive(false);
+                // ÇÖZÜM B: Veri henüz yok (yükleniyor) - gizlemek yerine placeholder göster
+                _pooledScripts[slot].gameObject.SetActive(true);
+                _pooledScripts[slot].ShowLoadingState(); 
             }
         }
 
         EnsurePagesForRange(firstVisibleIndex, poolSize);
     }
 
-    // --- Belirli bir index aralığı için gereken sayfaları yükle ---
     private void EnsurePagesForRange(int startIndex, int count)
-    {
-        int firstPage = Mathf.Max(0, startIndex / pageSize);
-        int lastPage = (startIndex + count) / pageSize;
+{
+    int firstPage = Mathf.Max(0, startIndex / pageSize);
+    // +1 buffer'ı kaldırıp, tam olarak kapsanan son sayfayı buluyoruz:
+    int lastPage = (startIndex + count - 1) / pageSize; 
 
-        for (int page = firstPage; page <= lastPage; page++)
-        {
-            LoadPageIfNeeded(page);
-        }
+    for (int page = firstPage; page <= lastPage; page++)
+    {
+        LoadPageIfNeeded(page);
     }
+}
 
     private void LoadPageIfNeeded(int page)
     {
@@ -213,9 +216,10 @@ public class LeaderboardPopup : MonoBehaviour
 
     private void UpdateContentHeight()
     {
+        // ÇÖZÜM C: İlk sayfa yüklenirken tahmini boşluğu azalt (pageSize / 2)
         int estimatedCount = _hasReachedEnd 
             ? _totalKnownCount 
-            : (_pageCache.Count * pageSize) + pageSize; // en az bir sayfa daha varmış gibi davran
+            : (_pageCache.Count * pageSize) + (pageSize / 2); 
 
         float height = estimatedCount * itemHeight;
         content.sizeDelta = new Vector2(content.sizeDelta.x, height);
