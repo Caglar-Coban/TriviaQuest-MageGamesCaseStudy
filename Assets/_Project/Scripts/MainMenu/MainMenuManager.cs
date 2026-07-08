@@ -25,7 +25,6 @@ public class MainMenuManager : MonoBehaviour
 
     private IEnumerator LoadGameplayAsync()
     {
-        // Parent vermeden Instantiate ediyoruz
         AsyncOperationHandle<GameObject> handle = Addressables.InstantiateAsync(gameplayPrefabKey);
 
         yield return handle;
@@ -34,12 +33,7 @@ public class MainMenuManager : MonoBehaviour
         {
             _activeGameplayInstance = handle.Result;
 
-            // Manager objesini kapatmıyoruz, sadece Canvas'ı gizliyoruz.
-            // Böylece Coroutine'ler sorunsuz çalışmaya devam eder.
-            if (mainMenuCanvas != null)
-            {
-                mainMenuCanvas.SetActive(false);
-            }
+            GameManager.Instance.ReleaseMainMenu();
         }
         else
         {
@@ -87,9 +81,6 @@ public class MainMenuManager : MonoBehaviour
             Addressables.ReleaseInstance(_activeLeaderboardPopup.gameObject);
         }
 
-        if (_activeGameplayInstance != null)
-        {
-            Addressables.ReleaseInstance(_activeGameplayInstance);
-        }
+       
     }
 }

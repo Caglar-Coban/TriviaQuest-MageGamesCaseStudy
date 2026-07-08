@@ -33,17 +33,13 @@ public class GameOverView : MonoBehaviour
     }
 
     public void OnReturnMainMenuClicked()
+{
+    GameObject gameplayRoot = this.transform.root.gameObject;
+    if (gameplayRoot != null)
     {
-        MainMenuManager mainMenu = FindAnyObjectByType<MainMenuManager>(FindObjectsInactive.Include);
-        if (mainMenu != null && mainMenu.mainMenuCanvas != null)
-        {
-            mainMenu.mainMenuCanvas.SetActive(true);
-        }
-
-        GameObject gameplayRoot = this.transform.root.gameObject; 
-        if (gameplayRoot != null)
-        {
-            Addressables.ReleaseInstance(gameplayRoot);
-        }
+        Addressables.ReleaseInstance(gameplayRoot);
     }
+
+    GameManager.Instance.ShowMainMenu();
+}
 }

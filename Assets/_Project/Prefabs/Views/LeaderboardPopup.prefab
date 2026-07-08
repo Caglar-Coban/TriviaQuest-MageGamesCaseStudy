@@ -93,8 +93,9 @@ MonoBehaviour:
   config: {fileID: 11400000, guid: 57c1c2b6fe690461897f077ff1f06c5b, type: 2}
   loadingIndicator: {fileID: 649786994564709291}
   itemHeight: 100
-  poolSize: 12
+  bufferItems: 2
   pageSize: 10
+  maxCachedPagesDistance: 0
 --- !u!223 &7309003768900733988
 Canvas:
   m_ObjectHideFlags: 0
@@ -612,7 +613,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 10, y: -30.8399}
-  m_SizeDelta: {x: 1060, y: 988.7144}
+  m_SizeDelta: {x: 1060, y: 552.4}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5461585932706477541
 CanvasRenderer:

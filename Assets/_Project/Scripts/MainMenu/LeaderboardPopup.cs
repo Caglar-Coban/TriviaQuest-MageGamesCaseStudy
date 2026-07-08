@@ -13,9 +13,13 @@ public class LeaderboardPopup : MonoBehaviour
     [SerializeField] private GameObject loadingIndicator;
 
     [Header("Virtualization")]
+    [Header("Virtualization")]
     [SerializeField] private float itemHeight = 100f;
-    [SerializeField] private int poolSize = 12; // ekranda görünen + buffer
-    [SerializeField] private int pageSize = 10; // API'nin bir sayfada döndürdüğü kayıt sayısı
+    [SerializeField] private int bufferItems = 2;
+    [SerializeField] private int pageSize = 10;
+    
+
+    private int poolSize; // artık runtime'da viewport'a göre hesaplanıyor
 
     // Recycled pool: sabit sayıda GameObject
     private readonly List<RectTransform> _pooledItems = new List<RectTransform>();
@@ -34,6 +38,7 @@ public class LeaderboardPopup : MonoBehaviour
     {
         _apiService = new ApiService(config);
         popupRoot.SetActive(false);
+        CalculatePoolSize();
         CreatePool();
     }
 
@@ -136,42 +141,87 @@ public class LeaderboardPopup : MonoBehaviour
                 _pooledScripts[slot].ShowLoadingState(); 
             }
         }
-
-        EnsurePagesForRange(firstVisibleIndex, poolSize);
     }
-
     private void EnsurePagesForRange(int startIndex, int count)
-{
-    int firstPage = Mathf.Max(0, startIndex / pageSize);
-    // +1 buffer'ı kaldırıp, tam olarak kapsanan son sayfayı buluyoruz:
-    int lastPage = (startIndex + count - 1) / pageSize; 
-
-    for (int page = firstPage; page <= lastPage; page++)
     {
-        LoadPageIfNeeded(page);
+        int firstPage = Mathf.Max(0, startIndex / pageSize);
+        int lastPage = (startIndex + count - 1) / pageSize;
+
+        Debug.Log($"[Leaderboard] Görünen aralık: index {startIndex}-{startIndex + count - 1} → gerekli sayfalar: {firstPage}-{lastPage}");
+
+        EvictOutsideRange(firstPage, lastPage);
+
+        for (int page = firstPage; page <= lastPage; page++)
+        {
+            LoadPageIfNeeded(page);
+        }
     }
-}
+
+    private void EvictOutsideRange(int firstVisiblePage, int lastVisiblePage)
+    {
+        if (_pageCache.Count == 0) return;
+
+        var toRemove = new List<int>();
+        foreach (var page in _pageCache.Keys)
+        {
+            if (page < firstVisiblePage || page > lastVisiblePage)
+            {
+                toRemove.Add(page);
+            }
+        }
+
+        foreach (var page in toRemove)
+        {
+            _pageCache.Remove(page);
+            Debug.Log($"[Leaderboard] 🗑 Page {page} cache'ten SİLİNDİ (artık görünen aralıkta değil: {firstVisiblePage}-{lastVisiblePage}).");
+        }
+    }
 
     private void LoadPageIfNeeded(int page)
     {
         if (page < 0) return;
-        if (_pageCache.ContainsKey(page)) return;
-        if (_pagesLoading.Contains(page)) return;
-        if (_hasReachedEnd && page * pageSize >= _totalKnownCount) return;
+
+        if (_pageCache.ContainsKey(page))
+        {
+            Debug.Log($"[Leaderboard] Page {page} zaten cache'te, tekrar çekilmiyor.");
+            return;
+        }
+
+        if (_pagesLoading.Contains(page))
+        {
+            Debug.Log($"[Leaderboard] Page {page} zaten yükleniyor, tekrar istek atılmıyor.");
+            return;
+        }
+
+        if (_hasReachedEnd && page * pageSize >= _totalKnownCount)
+        {
+            Debug.Log($"[Leaderboard] Page {page} son sayfadan sonrası, istek atılmadı (liste bitti).");
+            return;
+        }
 
         _pagesLoading.Add(page);
+
+        Debug.Log($"[Leaderboard] >>> Page {page} için network isteği BAŞLADI (key: page={page}).");
 
         if (loadingIndicator != null)
             loadingIndicator.SetActive(true);
 
-        StartCoroutine(_apiService.GetLeaderboard(page, 
-            result => OnPageLoaded(page, result), 
+        StartCoroutine(_apiService.GetLeaderboard(page,
+            result => OnPageLoaded(page, result),
             error => OnPageError(page, error)));
     }
 
     private void OnPageLoaded(int page, LeaderboardPage result)
     {
         _pagesLoading.Remove(page);
+
+        Debug.Log($"[Leaderboard] <<< Page {page} BAŞARIYLA geldi. {result.data.Length} eleman, is_last={result.is_last}");
+
+        if (!result.is_last && result.data.Length != pageSize)
+        {
+            Debug.LogWarning($"Page {page}: API {result.data.Length} eleman döndürdü ama pageSize={pageSize}. Uyuşmazlık var!");
+        }
+
         _pageCache[page] = result.data;
 
         if (result.is_last)
@@ -182,14 +232,13 @@ public class LeaderboardPopup : MonoBehaviour
         }
         else if (_totalKnownCount == int.MaxValue)
         {
-            // Henüz son sayfa bilinmiyor, content'i "tahmini" büyüklükte tut
             UpdateContentHeight();
         }
 
         if (_pagesLoading.Count == 0 && loadingIndicator != null)
             loadingIndicator.SetActive(false);
 
-        _lastFirstVisibleIndex = -1; // zorla yenile
+        _lastFirstVisibleIndex = -1;
         RefreshVisibleItems();
     }
 
@@ -223,5 +272,20 @@ public class LeaderboardPopup : MonoBehaviour
 
         float height = estimatedCount * itemHeight;
         content.sizeDelta = new Vector2(content.sizeDelta.x, height);
+    }
+
+    private void CalculatePoolSize()
+    {
+        float viewportHeight = scrollRect.viewport.rect.height;
+
+        // Viewport henüz 0 boyuttaysa (bazı layout durumlarında Awake'te olabilir) güvenli bir minimuma düş
+        if (viewportHeight <= 0f)
+        {
+            Canvas.ForceUpdateCanvases();
+            viewportHeight = scrollRect.viewport.rect.height;
+        }
+
+        int visibleCount = Mathf.CeilToInt(viewportHeight / itemHeight);
+        poolSize = Mathf.Max(1, visibleCount) + bufferItems;
     }
 }
