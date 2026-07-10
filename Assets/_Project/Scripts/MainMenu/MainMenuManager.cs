@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 public class MainMenuManager : MonoBehaviour
 {
-    [SerializeField] private LeaderBoardPopUp leaderboardpopup ;
+    public LeaderBoardPopUp LeaderBoardPopup ;
     public void PlayButtonClicked()
     {
         SceneManager.LoadScene("GamePlay");
@@ -10,6 +10,6 @@ public class MainMenuManager : MonoBehaviour
 
     public void LeaderBoardButttonClicked()
     {
-        leaderboardpopup.Open();
+        LeaderBoardPopup.Open();
     }
 }
