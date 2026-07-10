@@ -1,4 +1,3 @@
-// Data/Question.cs
 using System;
 
 [Serializable]
@@ -7,23 +6,33 @@ public class Question
     public string category;
     public string question;
     public string[] choices;
-    public string answer; // "A", "B", "C" veya "D"
+    public string answer;
 
-    // Harfi index'e çeviren yardımcı property
+
+
     public int CorrectAnswerIndex
     {
         get
         {
-            switch (answer)
+            if (answer == "A")
             {
-                case "A": return 0;
-                case "B": return 1;
-                case "C": return 2;
-                case "D": return 3;
-                default: return -1;
+                return 0 ;
             }
+            else if (answer == "B")
+            {
+                return 1 ;
+            }
+            else if (answer == "C")
+            {
+                return 2 ;
+            }
+            else
+            {
+                return 3;
+            }
+
         }
-    }
+    } 
 }
 
 [Serializable]

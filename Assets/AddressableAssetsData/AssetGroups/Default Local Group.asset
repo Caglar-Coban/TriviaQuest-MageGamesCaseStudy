@@ -14,27 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Default Local Group
   m_GUID: 8632cbef2e97b4b4d9a5edc14dd0a605
-  m_SerializeEntries:
-  - m_GUID: 02ae1f0f5c4004745b79eaab6700809f
-    m_Address: GameOverPanel
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 25b1557e739094cc2bfe56fb72e09904
-    m_Address: MainMenu
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: 61a8e2d466dba40f5a0763a39f0f2efa
-    m_Address: LeaderboardPopup
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
-  - m_GUID: b84d4fca2570148e985935cbb4724ce2
-    m_Address: GameplayPrefab
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
+  m_SerializeEntries: []
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: f4faaef5699e04b9289ee69c0df574a3, type: 2}
   m_SchemaSet:
