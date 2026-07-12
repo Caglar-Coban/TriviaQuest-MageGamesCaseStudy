@@ -16,9 +16,15 @@ public class LeaderBoardPopUp : MonoBehaviour
     public LeaderBoardItem itemPrefab;
     public ApiService apiService;
     public GameConfig gameConfig;
-    public int pagenumber = 0;
+    
     public ScrollRect scrollRect;
-    public List<IEnumerator> cachedCoroutines = new List<IEnumerator>();
+
+
+    public int lastvisibleindex;
+    private int firstVisibleIndex;
+    private bool isLoading = false;
+    public int pagenumber = 0;
+    private bool isLastPage = false;
     private void Awake()
     {
         apiService = new ApiService(gameConfig); 
@@ -40,12 +46,14 @@ public class LeaderBoardPopUp : MonoBehaviour
         UpdateContentSize();
         EnsurePoolSize();
         RefreshVisibleItems();
-        
+        isLoading = false;
+        isLastPage = page.is_last;
     }
 
     private void OnError(string message)
     {
         Debug.LogError(message);
+        isLoading = false;
     }
 
     public void Close()
@@ -64,7 +72,7 @@ public class LeaderBoardPopUp : MonoBehaviour
 
     public void RefreshVisibleItems(){
 
-        int firstVisibleIndex = Mathf.FloorToInt(content.anchoredPosition.y / (itemHeight + spacing));
+        firstVisibleIndex = Mathf.FloorToInt(content.anchoredPosition.y / (itemHeight + spacing));
 
         int maxFirstIndex = Mathf.Max(0, entries.Count - pool.Count);
 
@@ -87,6 +95,7 @@ public class LeaderBoardPopUp : MonoBehaviour
                 
             }
         }
+        CheckLoadMore();
 
     }
 
@@ -127,6 +136,20 @@ public class LeaderBoardPopUp : MonoBehaviour
         content.sizeDelta = new Vector2(content.sizeDelta.x, contentHeight);
     }
 
+    public void CheckLoadMore()
+    {
+         lastvisibleindex = firstVisibleIndex + pool.Count - 1;
 
+    if (lastvisibleindex  + buffer >= entries.Count && !isLoading  && !isLastPage)
+    {
+        isLoading = true;
+        pagenumber++;
+        StartCoroutine(apiService.GetLeaderBoard(pagenumber, OnPageLoaded, OnError));
+        
+
+    }
+
+    
+    }
 
 }
