@@ -62,13 +62,15 @@ public class ApiService : IApiService
                 try
                 {
                     string textjson = courier.downloadHandler.text;
+                    textjson = SanitizeJson(textjson);
                     QuestionData textdata = JsonUtility.FromJson<QuestionData>(textjson);
 
                     onSuccess?.Invoke(textdata);
                 }
 
-                catch
+                catch (Exception e)
                 {
+                    Debug.LogError("PARSE ERROR: " + e.Message);
                     onError?.Invoke("Couldn't received Api data QuestionData -- translate error");
 
                 }
@@ -81,5 +83,13 @@ public class ApiService : IApiService
             }
         }
     
+    }
+
+    public string SanitizeJson(string json)
+    {
+        json = json.Replace("\\", " ");
+        json = json.Replace("\n", " ");
+        json = json.Replace("\r", " ");
+        return json;
     }
 }
