@@ -7,7 +7,7 @@ public class FinishedState : IQuizState
     public void Enter(QuizManager quizManager)
     {
         quizManager.finishedPanel.SetActive(true);
-        quizManager.finalScoreText.text = "Final Score: " + quizManager.score.ToString();
+        quizManager.finalScoreText.text = "Final Score: " + quizManager.finalscore.ToString();
     }
 
     public void Exit(QuizManager quizManager)

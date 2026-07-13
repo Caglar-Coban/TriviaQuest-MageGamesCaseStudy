@@ -16,6 +16,7 @@ public class QuizManager : MonoBehaviour
     public GameConfig gameConfig;
     public Timer timer;
     public int score = 0;
+    public int finalscore = 0;
     private IQuizState currentState;
 
     public GameObject finishedPanel;
@@ -113,6 +114,7 @@ public class QuizManager : MonoBehaviour
 
     public void UpdateScore(int scoreChange)
     {
+        finalscore += scoreChange;
         OnScoreChanged?.Invoke(scoreChange);
     }
     
