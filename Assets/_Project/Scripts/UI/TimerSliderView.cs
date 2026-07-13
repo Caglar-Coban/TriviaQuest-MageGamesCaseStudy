@@ -1,68 +1,50 @@
 using UnityEngine;
 using UnityEngine.UI;
-
 public class TimerSliderView : MonoBehaviour
 {
-    [Header("References")]
     public Slider timerSlider;
     public Timer timer;
-    
     private Image fillImage;
 
     void Start()
     {
-        // 1. Slider atanmış mı kontrolü
-        if (timerSlider == null)
-        {
-            Debug.LogError("HATA: TimerSliderView scriptinde 'timerSlider' boş! Lütfen Inspector'dan sürükleyin.");
-            return;
-        }
+        timerSlider.maxValue = 1f;
+        timerSlider.value = 1f;
 
-        // 2. Timer atanmış mı kontrolü
-        if (timer == null)
-        {
-            Debug.LogError("HATA: TimerSliderView scriptinde 'timer' boş! Lütfen Inspector'dan sürükleyin.");
-        }
-
-        // 3. Fill Rect ve Image kontrolü
         if (timerSlider.fillRect != null)
         {
             fillImage = timerSlider.fillRect.GetComponent<Image>();
-            if (fillImage == null)
-            {
-                Debug.LogError("HATA: Slider'ın 'Fill Rect' objesinde Image bileşeni YOK!");
-            }
         }
-        else
-        {
-            Debug.LogError("HATA: Slider bileşenindeki 'Fill Rect' kısmı BOŞ atanmış!");
-        }
-
-        timerSlider.maxValue = 1f;
-        timerSlider.value = 1f;
     }
 
-    void Update()
+    private void OnEnable()
     {
-        // Eğer yukarıdaki referanslardan biri bile yoksa, kod burada durur ve çubuk ASLA küçülmez!
-        if (timer == null || fillImage == null || timerSlider == null) 
-        {
-            return; 
-        }
+        if (timer != null)
+            timer.OnTimerTick += HandleTick;
+    }
 
-        float maxDuration = timer.currentMaxDuration > 0f ? timer.currentMaxDuration : 1f;
-        float percentage = timer.remaningTime / maxDuration;
-        
-        timerSlider.value = percentage;
+    private void OnDisable()
+    {
+        if (timer != null)
+            timer.OnTimerTick -= HandleTick;
+    }
 
-        if (percentage > 0.3f)
+    private void HandleTick(float remainingTime)
+    {
+        if (timer.currentMaxDuration > 0)
         {
-            fillImage.color = Color.white;
-        }
-        else
-        {
-            float lerpFactor = Mathf.InverseLerp(0.3f, 0f, percentage);
-            fillImage.color = Color.Lerp(Color.white, Color.red, lerpFactor);
+            float normalizedValue = remainingTime / timer.currentMaxDuration;
+            timerSlider.value = normalizedValue;
+
+            if (fillImage != null && normalizedValue < 0.3f)
+            {
+                float lerpFactor = Mathf.InverseLerp(0.3f, 0f, normalizedValue);
+                fillImage.color = Color.Lerp(Color.white, Color.red, lerpFactor);
+            }
+            else if (fillImage != null)
+            {
+                fillImage.color = Color.white;
+            }
         }
     }
 }
