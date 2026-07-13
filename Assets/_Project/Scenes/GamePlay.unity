@@ -2357,6 +2357,7 @@ MonoBehaviour:
   gameConfig: {fileID: 11400000, guid: 8f3b6687adcd44be2967a529b317f54a, type: 2}
   timer: {fileID: 1187659102}
   score: 0
+  finalscore: 0
   finishedPanel: {fileID: 312710788}
   finalScoreText: {fileID: 1076444796}
 --- !u!224 &1379944786
