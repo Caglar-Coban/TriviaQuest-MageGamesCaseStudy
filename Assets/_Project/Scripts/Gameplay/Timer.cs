@@ -7,7 +7,7 @@ public class Timer : MonoBehaviour
 
     public event Action OnTimeUp;
 
-
+    public float remaningTime;
     private Coroutine timerCoroutine;
     public void StartTimer(float duration)
     {
@@ -28,7 +28,7 @@ public class Timer : MonoBehaviour
     public IEnumerator RunTimer(float duration)
     {
         float elapsedTime = 0f;
-        float remaningTime = duration;
+        remaningTime = duration;
         while (elapsedTime < duration)
         {
             elapsedTime += Time.deltaTime;
