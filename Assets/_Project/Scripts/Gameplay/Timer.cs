@@ -9,10 +9,12 @@ public class Timer : MonoBehaviour
 
     public float remaningTime;
     private Coroutine timerCoroutine;
+    public float currentMaxDuration;
     public void StartTimer(float duration)
     {
         if (timerCoroutine == null)
         {
+            currentMaxDuration = duration;
             timerCoroutine = StartCoroutine(RunTimer(duration));
         }
     }
