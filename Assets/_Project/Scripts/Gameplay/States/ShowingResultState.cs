@@ -19,18 +19,18 @@ public class ShowingResultState : IQuizState
         if (selectedAnswerIndex == -1)
         {
             Debug.Log("No answer selected. No Answer Penalty applied.");
-            quizManager.score += quizManager.gameConfig.timeoutscore;
+            quizManager.UpdateScore(quizManager.gameConfig.timeoutscore);
         }
         else if (selectedAnswerIndex != correctAnswerIndex)
         {
             quizManager.answerButtons[selectedAnswerIndex].GetComponent<Image>().color = Color.red;
             Debug.Log("Wrong answer selected. Wrong Answer Penalty applied.");
-            quizManager.score += quizManager.gameConfig.wronganswerscore;
+            quizManager.UpdateScore(quizManager.gameConfig.wronganswerscore);
         }
         else
         {
             Debug.Log("Correct answer selected. Correct Answer Reward applied.");
-            quizManager.score += quizManager.gameConfig.correctanswerscore;
+            quizManager.UpdateScore(quizManager.gameConfig.correctanswerscore);
         }
         quizManager.answerButtons[correctAnswerIndex].GetComponent<Image>().color = Color.green;
 

@@ -20,6 +20,7 @@ public class QuizManager : MonoBehaviour
 
     public GameObject finishedPanel;
     public TMP_Text finalScoreText;
+    public event Action<int> OnScoreChanged;
     private void Awake()
     {
         apiService = new ApiService(gameConfig); 
@@ -109,4 +110,11 @@ public class QuizManager : MonoBehaviour
     {
         currentState?.OnAnswerSelected(this, index);
     }
+
+    public void UpdateScore(int scoreChange)
+    {
+        OnScoreChanged?.Invoke(scoreChange);
     }
+    
+    
+}
