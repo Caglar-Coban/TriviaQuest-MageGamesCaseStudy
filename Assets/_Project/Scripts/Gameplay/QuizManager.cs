@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 using System;
+using UnityEngine.SceneManagement;
 public class QuizManager : MonoBehaviour
 {
     public TextMeshProUGUI questionText;
@@ -13,21 +14,39 @@ public class QuizManager : MonoBehaviour
     public int currentQuestionIndex = 0;
     public IApiService apiService;
     public GameConfig gameConfig;
+    public Timer timer;
+    public int score = 0;
+    private IQuizState currentState;
+
+    public GameObject finishedPanel;
+    public TMP_Text finalScoreText;
     private void Awake()
     {
         apiService = new ApiService(gameConfig); 
         
     }
     
+    
     public void Start()
     {
+        for (int i = 0; i < answerButtons.Count; i++)
+        {
+            int capturedIndex = i; 
+            answerButtons[i].onClick.AddListener(() => OnAnswerButtonClicked(capturedIndex));
+        }
         StartCoroutine(apiService.GetQuestions(OnQuestionsLoaded, OnError));
+    }
+
+    public void ChangeState(IQuizState newState)
+    {
+        currentState?.Exit(this);
+        currentState = newState;
+        currentState?.Enter(this);
     }
     public void OnQuestionsLoaded(QuestionData questionData)
     {
         questions = questionData;
-        DisplayQuestion(currentQuestionIndex);
-        DisplayChoices(currentQuestionIndex);
+        ChangeState(new WaitingForAnswerState());
     }
 
     public void OnError(string message)
@@ -67,51 +86,6 @@ public class QuizManager : MonoBehaviour
         }
     }
 
-    public void SubmitAnswer(int index)
-    {
-        if (index == questions.questions[currentQuestionIndex].CorrectAnswerIndex)
-        {
-            Debug.Log("Correct answer!");
-            CorrectAnswer(index);
-        }
-        else
-        {
-            Debug.Log("Incorrect answer.");
-            IncorrectAnswer(index);
-        }
-    }
-
-    public void CorrectAnswer(int index)
-    {
-        answerButtons[index].GetComponent<Image>().color = Color.green;
-        NextQuestion();
-    }
-
-    public void IncorrectAnswer(int index)
-    {
-        answerButtons[index].GetComponent<Image>().color = Color.red;
-        answerButtons[questions.questions[currentQuestionIndex].CorrectAnswerIndex].GetComponent<Image>().color = Color.green;
-        NextQuestion();
-    }
-
-    public void NextQuestion()
-    {
-        if (currentQuestionIndex < questions.questions.Length -1)
-        {
-            currentQuestionIndex++;
-            DisplayQuestion(currentQuestionIndex);
-            DisplayChoices(currentQuestionIndex);
-            ResetButtonColors();
-            
-        }
-        else
-        {
-            Debug.Log("Quiz completed.");
-        }
-
-
-    }
-
     public void ResetButtonColors()
     {
         foreach (var button in answerButtons)
@@ -120,4 +94,19 @@ public class QuizManager : MonoBehaviour
         }
     }
     
+
+    public void ReturnToMainMenu()
+    {
+        SceneManager.LoadScene("MainMenu");
+    }
+
+    public void RestartQuiz()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    public void OnAnswerButtonClicked(int index)
+    {
+        currentState?.OnAnswerSelected(this, index);
+    }
     }

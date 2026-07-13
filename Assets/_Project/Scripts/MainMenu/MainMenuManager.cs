@@ -3,7 +3,6 @@ using UnityEngine.SceneManagement;
 public class MainMenuManager : MonoBehaviour
 {
     public LeaderBoardPopUp LeaderBoardPopup ;
-    public QuizManager quizManager;
     public void PlayButtonClicked()
     {
         SceneManager.LoadScene("GamePlay");

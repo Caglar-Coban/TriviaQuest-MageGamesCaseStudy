@@ -10,7 +10,7 @@ public class GameConfig : ScriptableObject
 
     [Header("Timing")]
     public float questionduration = 20f;
-
+    public float resultDisplayDuration = 2f;
 
     [Header("API")]
     public string leaderboardformaturl = "https://magegamessite.web.app/case1/leaderboard_page_{0}.json" ; 

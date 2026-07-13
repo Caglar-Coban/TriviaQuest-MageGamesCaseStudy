@@ -58,14 +58,19 @@ public class ApiService : IApiService
 
             if (courier.result == UnityWebRequest.Result.Success)
             {
-
+                QuestionData textdata = null;
                 try
                 {
+                    if (courier.downloadHandler == null || string.IsNullOrEmpty(courier.downloadHandler.text))
+                    {
+                        throw new Exception("DownloadHandler text is null or empty.");
+                    }
+                    
                     string textjson = courier.downloadHandler.text;
                     textjson = SanitizeJson(textjson);
-                    QuestionData textdata = JsonUtility.FromJson<QuestionData>(textjson);
+                    textdata = JsonUtility.FromJson<QuestionData>(textjson);
 
-                    onSuccess?.Invoke(textdata);
+                    
                 }
 
                 catch (Exception e)
@@ -74,7 +79,7 @@ public class ApiService : IApiService
                     onError?.Invoke("Couldn't received Api data QuestionData -- translate error");
 
                 }
-              
+                onSuccess?.Invoke(textdata);
 
             }
             else
@@ -87,7 +92,6 @@ public class ApiService : IApiService
 
     public string SanitizeJson(string json)
     {
-        json = json.Replace("\\", " ");
         json = json.Replace("\n", " ");
         json = json.Replace("\r", " ");
         return json;
