@@ -10,7 +10,7 @@ public class LeaderBoardPopUp : MonoBehaviour
     public List<LeaderBoardEntry> entries;
     public List<LeaderBoardItem> pool;
     public float itemHeight = 100f;
-    public float spacing = 30f;
+    public float spacing = 0f;
     public RectTransform viewport;
     public int buffer = 1;
     public LeaderBoardItem itemPrefab;

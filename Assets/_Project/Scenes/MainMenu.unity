@@ -259,7 +259,7 @@ MonoBehaviour:
   entries: []
   pool: []
   itemHeight: 100
-  spacing: 30
+  spacing: 0
   viewport: {fileID: 1768512856}
   buffer: 1
   itemPrefab: {fileID: 3592678227247792414, guid: b67c82eb541e748ec868b41f0b6ec085, type: 3}
@@ -1253,8 +1253,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1447636563}
-  - component: {fileID: 1447636565}
-  - component: {fileID: 1447636564}
   m_Layer: 5
   m_Name: Content
   m_TagString: Untagged
@@ -1276,51 +1274,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1768512856}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.0009765625}
-  m_SizeDelta: {x: 0, y: -688.01807}
-  m_Pivot: {x: 0, y: 1}
---- !u!114 &1447636564
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1447636562}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
-  m_HorizontalFit: 0
-  m_VerticalFit: 0
---- !u!114 &1447636565
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1447636562}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59f8146938fff824cb5fd77236b75775, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
-  m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
-  m_ChildAlignment: 0
-  m_Spacing: 0
-  m_ChildForceExpandWidth: 0
-  m_ChildForceExpandHeight: 0
-  m_ChildControlWidth: 0
-  m_ChildControlHeight: 0
-  m_ChildScaleWidth: 0
-  m_ChildScaleHeight: 0
-  m_ReverseArrangement: 0
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: -0.018066406}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!1 &1560520397
 GameObject:
   m_ObjectHideFlags: 0
@@ -1632,7 +1590,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: -191.98193}
-  m_SizeDelta: {x: -17, y: -291.9819}
+  m_SizeDelta: {x: 0, y: -291.9819}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1768512857
 MonoBehaviour:
