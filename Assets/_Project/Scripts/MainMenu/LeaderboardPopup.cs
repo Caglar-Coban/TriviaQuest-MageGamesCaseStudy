@@ -21,10 +21,16 @@ public class LeaderBoardPopUp : MonoBehaviour
 
 
     public int lastvisibleindex;
-    private int firstVisibleIndex;
+    private int firstDataIndex;
     private bool isLoading = false;
     public int pagenumber = 0;
     private bool isLastPage = false;
+    
+
+    private int lastVisibleToUser;
+    private int firstVisibleToUser;
+    
+    
     private void Awake()
     {
         apiService = new ApiService(gameConfig); 
@@ -63,6 +69,7 @@ public class LeaderBoardPopUp : MonoBehaviour
         {
         Destroy(item.gameObject);
         }
+        pagenumber = 0;
         pool.Clear();
         content.anchoredPosition = Vector2.zero;
         popupPanel.SetActive(false);
@@ -72,15 +79,15 @@ public class LeaderBoardPopUp : MonoBehaviour
 
     public void RefreshVisibleItems(){
 
-        firstVisibleIndex = Mathf.FloorToInt(content.anchoredPosition.y / (itemHeight + spacing));
+        int rawFirstIndex = Mathf.FloorToInt(content.anchoredPosition.y / (itemHeight + spacing));
 
         int maxFirstIndex = Mathf.Max(0, entries.Count - pool.Count);
 
-        firstVisibleIndex = Mathf.Clamp(firstVisibleIndex, 0, maxFirstIndex);
+        firstDataIndex = Mathf.Clamp(rawFirstIndex, 0, maxFirstIndex);
 
         for(int i = 0; i< pool.Count;i++){
 
-            int dataIndex = firstVisibleIndex + i;
+            int dataIndex = firstDataIndex + i;
 
             float y = -dataIndex * (itemHeight + spacing);
 
@@ -95,6 +102,12 @@ public class LeaderBoardPopUp : MonoBehaviour
                 
             }
         }
+
+        int visibleItemCount = Mathf.CeilToInt(viewport.rect.height / (itemHeight + spacing));
+
+        int maxVisibleStart = Mathf.Max(0, entries.Count - visibleItemCount);
+        firstVisibleToUser = Mathf.Clamp(rawFirstIndex + buffer, 0, maxVisibleStart);
+        lastVisibleToUser = Mathf.Min(firstVisibleToUser + visibleItemCount - 1, entries.Count - 1);
         CheckLoadMore();
 
     }
@@ -123,7 +136,9 @@ public class LeaderBoardPopUp : MonoBehaviour
     }
     public void OnScroll(Vector2 position)
     {
+
         RefreshVisibleItems();
+        Debug.Log("User sees first visible index: " + (firstVisibleToUser + 1) + " and last visible index: " + (lastVisibleToUser + 1));
     }
 
 
@@ -138,9 +153,9 @@ public class LeaderBoardPopUp : MonoBehaviour
 
     public void CheckLoadMore()
     {
-         lastvisibleindex = firstVisibleIndex + pool.Count - 1;
+         lastvisibleindex = firstDataIndex + pool.Count - 1;
 
-    if (lastvisibleindex  + buffer >= entries.Count && !isLoading  && !isLastPage)
+    if (lastvisibleindex  + 1 >= entries.Count && !isLoading  && !isLastPage)
     {
         isLoading = true;
         pagenumber++;
