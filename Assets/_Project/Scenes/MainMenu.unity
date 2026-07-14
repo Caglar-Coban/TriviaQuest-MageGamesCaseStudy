@@ -256,7 +256,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LeaderBoardPopUp
   popupPanel: {fileID: 212304704}
   content: {fileID: 1447636563}
-  entries: []
   pool: []
   itemHeight: 100
   spacing: 0
@@ -267,6 +266,8 @@ MonoBehaviour:
   scrollRect: {fileID: 474502187}
   lastvisibleindex: 0
   pagenumber: 0
+  pageSize: 10
+  totalItemCount: 0
 --- !u!1 &307889035
 GameObject:
   m_ObjectHideFlags: 0

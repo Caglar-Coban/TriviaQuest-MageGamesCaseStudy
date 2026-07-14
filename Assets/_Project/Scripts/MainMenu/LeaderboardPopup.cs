@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine.UI;
+
 public class LeaderBoardPopUp : MonoBehaviour
 {
     public GameObject popupPanel;
@@ -39,6 +40,7 @@ public class LeaderBoardPopUp : MonoBehaviour
     {
         apiService = new ApiService(gameConfig); 
     }
+
     public void Open()
     {
         popupPanel.SetActive(true);
@@ -47,21 +49,21 @@ public class LeaderBoardPopUp : MonoBehaviour
 
     private void OnPageLoaded(int loadedPageNum, LeaderboardPage page)
     {
-       
         loadingPages.Remove(loadedPageNum);
         pageCache[loadedPageNum] = page.data;
 
-        Debug.Log("Page " + loadedPageNum + " loaded and added to cache");
+        Debug.Log("[Leaderboard] Page " + loadedPageNum + " loaded and added to cache");
         isLastPage = page.is_last;
+        
         if (isLastPage) 
         {
             totalItemCount = (loadedPageNum * pageSize) + page.data.Length;
         } 
         else 
         {
-    
             totalItemCount = Mathf.Max(totalItemCount, (loadedPageNum + 1) * pageSize + pageSize);
         }
+        
         UpdateContentSize();
         EnsurePoolSize();
         RefreshVisibleItems();
@@ -78,32 +80,31 @@ public class LeaderBoardPopUp : MonoBehaviour
         pageCache.Clear();
         loadingPages.Clear();
         totalItemCount = 0;
-        Debug.Log("Closing Leaderboard Popup. Cleared cache and reset total item count.");
+        Debug.Log("[Leaderboard] Closing Popup. Cleared cache and reset total item count.");
+        
         foreach (var item in pool)
         {
-        Destroy(item.gameObject);
+            Destroy(item.gameObject);
         }
+        
         pagenumber = 0;
         pool.Clear();
         content.anchoredPosition = Vector2.zero;
         popupPanel.SetActive(false);
-
-
     }
 
-    public void RefreshVisibleItems(){
-
+    public void RefreshVisibleItems()
+    {
         int rawFirstIndex = Mathf.FloorToInt(content.anchoredPosition.y / (itemHeight + spacing));
 
-        int maxFirstIndex = Mathf.Max(0, totalItemCount - pool.Count);
-
+        int safeTotalCount = Mathf.Max(0, totalItemCount);
+        int maxFirstIndex = Mathf.Max(0, safeTotalCount - pool.Count);
         firstDataIndex = Mathf.Clamp(rawFirstIndex, 0, maxFirstIndex);
 
         for(int i = 0; i < pool.Count; i++)
         {
             int dataIndex = firstDataIndex + i;
             float y = -dataIndex * (itemHeight + spacing);
-
 
             int pageIndex = dataIndex / pageSize;
             int localIndex = dataIndex % pageSize;
@@ -117,9 +118,7 @@ public class LeaderBoardPopUp : MonoBehaviour
             } 
             else if (dataIndex < totalItemCount) 
             {  
-        
                 pool[i].gameObject.SetActive(true);
-              
             }
             else 
             {
@@ -129,11 +128,18 @@ public class LeaderBoardPopUp : MonoBehaviour
 
         int visibleItemCount = Mathf.CeilToInt(viewport.rect.height / (itemHeight + spacing));
 
-        int maxVisibleStart = Mathf.Max(0, totalItemCount - visibleItemCount);
-        firstVisibleToUser = Mathf.Clamp(rawFirstIndex + buffer, 0, maxVisibleStart);
-        lastVisibleToUser = Mathf.Min(firstVisibleToUser + visibleItemCount - 1, totalItemCount - 1);
-        CheckAndLoadVisiblePages();
+        
+        int maxVisibleStart = Mathf.Max(0, safeTotalCount - visibleItemCount);
+        firstVisibleToUser = Mathf.Clamp(rawFirstIndex, 0, maxVisibleStart); 
+        
+        
+        if (safeTotalCount == 0) {
+            lastVisibleToUser = Mathf.Max(0, visibleItemCount - 1);
+        } else {
+            lastVisibleToUser = Mathf.Min(firstVisibleToUser + visibleItemCount - 1, safeTotalCount - 1);
+        }
 
+        CheckAndLoadVisiblePages();
     }
 
 
@@ -158,15 +164,12 @@ public class LeaderBoardPopUp : MonoBehaviour
     {
         scrollRect.onValueChanged.RemoveListener(OnScroll);
     }
+    
     public void OnScroll(Vector2 position)
     {
-
         RefreshVisibleItems();
-        Debug.Log("User sees first visible indexand last visible index: " + (firstVisibleToUser + 1) + "-" + (lastVisibleToUser + 1));
+        Debug.Log("User sees index: " + (firstVisibleToUser + 1) + " - " + (lastVisibleToUser + 1));
     }
-
-
-    
 
 
     public void UpdateContentSize()
@@ -177,34 +180,43 @@ public class LeaderBoardPopUp : MonoBehaviour
 
     public void CheckAndLoadVisiblePages()
     {
+       
         int startPage = firstVisibleToUser / pageSize;
         int endPage = lastVisibleToUser / pageSize;
-
-
-        if (!isLastPage) {
-            endPage += buffer;
-        }
 
         HashSet<int> neededPages = new HashSet<int>();
 
         for (int p = startPage; p <= endPage; p++)
         {
+            if (isLastPage && (p * pageSize) >= totalItemCount) break;
             neededPages.Add(p);
         }
 
+       
         foreach (int page in neededPages)
         {
             if (!pageCache.ContainsKey(page) && !loadingPages.Contains(page))
             {
                 loadingPages.Add(page);
-
-                Debug.Log("Loading page: " + page);
-  
+                Debug.Log($"[Leaderboard] + page {page} loading...");
                 StartCoroutine(apiService.GetLeaderBoard(page, (pageData) => OnPageLoaded(page, pageData), OnError));
             }
         }
+
+        
+        List<int> pagesToRemove = new List<int>();
+        foreach (int cachedPage in pageCache.Keys)
+        {
+            if (cachedPage < startPage|| cachedPage > endPage)
+            {
+                pagesToRemove.Add(cachedPage);
+            }
+        }
+
+        foreach (int page in pagesToRemove)
+        {
+            pageCache.Remove(page);
+            Debug.Log($"page {page} deleted from cache");
+        }
     }
-
-    
-
 }
