@@ -7,7 +7,6 @@ public class LeaderBoardPopUp : MonoBehaviour
 {
     public GameObject popupPanel;
     public RectTransform content;
-    public List<LeaderBoardEntry> entries;
     public List<LeaderBoardItem> pool;
     public float itemHeight = 100f;
     public float spacing = 0f;
@@ -25,6 +24,11 @@ public class LeaderBoardPopUp : MonoBehaviour
     private bool isLoading = false;
     public int pagenumber = 0;
     private bool isLastPage = false;
+
+    public Dictionary<int, LeaderBoardEntry[]> pageCache = new Dictionary<int, LeaderBoardEntry[]>();
+    private HashSet<int> loadingPages = new HashSet<int>();
+    public int pageSize = 10;
+    public int totalItemCount = 0;
     
 
     private int lastVisibleToUser;
@@ -38,22 +42,29 @@ public class LeaderBoardPopUp : MonoBehaviour
     public void Open()
     {
         popupPanel.SetActive(true);
-       
-
-        StartCoroutine(apiService.GetLeaderBoard(pagenumber, OnPageLoaded, OnError));
-        
-
+        CheckAndLoadVisiblePages();
     }
 
-    private void OnPageLoaded(LeaderboardPage page)
+    private void OnPageLoaded(int loadedPageNum, LeaderboardPage page)
     {
        
-        entries.AddRange(page.data);
+        loadingPages.Remove(loadedPageNum);
+        pageCache[loadedPageNum] = page.data;
+
+        Debug.Log("Page " + loadedPageNum + " loaded and added to cache");
+        isLastPage = page.is_last;
+        if (isLastPage) 
+        {
+            totalItemCount = (loadedPageNum * pageSize) + page.data.Length;
+        } 
+        else 
+        {
+    
+            totalItemCount = Mathf.Max(totalItemCount, (loadedPageNum + 1) * pageSize + pageSize);
+        }
         UpdateContentSize();
         EnsurePoolSize();
         RefreshVisibleItems();
-        isLoading = false;
-        isLastPage = page.is_last;
     }
 
     private void OnError(string message)
@@ -64,7 +75,10 @@ public class LeaderBoardPopUp : MonoBehaviour
 
     public void Close()
     {
-        entries.Clear();
+        pageCache.Clear();
+        loadingPages.Clear();
+        totalItemCount = 0;
+        Debug.Log("Closing Leaderboard Popup. Cleared cache and reset total item count.");
         foreach (var item in pool)
         {
         Destroy(item.gameObject);
@@ -81,34 +95,44 @@ public class LeaderBoardPopUp : MonoBehaviour
 
         int rawFirstIndex = Mathf.FloorToInt(content.anchoredPosition.y / (itemHeight + spacing));
 
-        int maxFirstIndex = Mathf.Max(0, entries.Count - pool.Count);
+        int maxFirstIndex = Mathf.Max(0, totalItemCount - pool.Count);
 
         firstDataIndex = Mathf.Clamp(rawFirstIndex, 0, maxFirstIndex);
 
-        for(int i = 0; i< pool.Count;i++){
-
+        for(int i = 0; i < pool.Count; i++)
+        {
             int dataIndex = firstDataIndex + i;
-
             float y = -dataIndex * (itemHeight + spacing);
 
-            if (dataIndex < entries.Count) {   
+
+            int pageIndex = dataIndex / pageSize;
+            int localIndex = dataIndex % pageSize;
+
+            pool[i].GetComponent<RectTransform>().anchoredPosition = new Vector2(0, y); 
+
+            if (pageCache.ContainsKey(pageIndex) && localIndex < pageCache[pageIndex].Length) 
+            {  
                 pool[i].gameObject.SetActive(true);
-                pool[i].ShowData(entries[dataIndex]);
-                pool[i].GetComponent<RectTransform>().anchoredPosition = new Vector2(0, y); 
-                
+                pool[i].ShowData(pageCache[pageIndex][localIndex]); 
             } 
-            else{   
+            else if (dataIndex < totalItemCount) 
+            {  
+        
+                pool[i].gameObject.SetActive(true);
+              
+            }
+            else 
+            {
                 pool[i].gameObject.SetActive(false);
-                
             }
         }
 
         int visibleItemCount = Mathf.CeilToInt(viewport.rect.height / (itemHeight + spacing));
 
-        int maxVisibleStart = Mathf.Max(0, entries.Count - visibleItemCount);
+        int maxVisibleStart = Mathf.Max(0, totalItemCount - visibleItemCount);
         firstVisibleToUser = Mathf.Clamp(rawFirstIndex + buffer, 0, maxVisibleStart);
-        lastVisibleToUser = Mathf.Min(firstVisibleToUser + visibleItemCount - 1, entries.Count - 1);
-        CheckLoadMore();
+        lastVisibleToUser = Mathf.Min(firstVisibleToUser + visibleItemCount - 1, totalItemCount - 1);
+        CheckAndLoadVisiblePages();
 
     }
 
@@ -138,7 +162,7 @@ public class LeaderBoardPopUp : MonoBehaviour
     {
 
         RefreshVisibleItems();
-        Debug.Log("User sees first visible index: " + (firstVisibleToUser + 1) + " and last visible index: " + (lastVisibleToUser + 1));
+        Debug.Log("User sees first visible indexand last visible index: " + (firstVisibleToUser + 1) + "-" + (lastVisibleToUser + 1));
     }
 
 
@@ -147,24 +171,38 @@ public class LeaderBoardPopUp : MonoBehaviour
 
     public void UpdateContentSize()
     {
-        float contentHeight = entries.Count * (itemHeight + spacing);
+        float contentHeight = totalItemCount * (itemHeight + spacing);
         content.sizeDelta = new Vector2(content.sizeDelta.x, contentHeight);
     }
 
-    public void CheckLoadMore()
+    public void CheckAndLoadVisiblePages()
     {
-         lastvisibleindex = firstDataIndex + pool.Count - 1;
+        int startPage = firstVisibleToUser / pageSize;
+        int endPage = lastVisibleToUser / pageSize;
 
-    if (lastvisibleindex  + 1 >= entries.Count && !isLoading  && !isLastPage)
-    {
-        isLoading = true;
-        pagenumber++;
-        StartCoroutine(apiService.GetLeaderBoard(pagenumber, OnPageLoaded, OnError));
-        
 
-    }
+        if (!isLastPage) {
+            endPage += buffer;
+        }
 
-    
+        HashSet<int> neededPages = new HashSet<int>();
+
+        for (int p = startPage; p <= endPage; p++)
+        {
+            neededPages.Add(p);
+        }
+
+        foreach (int page in neededPages)
+        {
+            if (!pageCache.ContainsKey(page) && !loadingPages.Contains(page))
+            {
+                loadingPages.Add(page);
+
+                Debug.Log("Loading page: " + page);
+  
+                StartCoroutine(apiService.GetLeaderBoard(page, (pageData) => OnPageLoaded(page, pageData), OnError));
+            }
+        }
     }
 
     
