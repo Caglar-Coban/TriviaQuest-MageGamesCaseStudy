@@ -88,6 +88,8 @@ public class LeaderBoardPopUp : MonoBehaviour
         }
         
         pagenumber = 0;
+        isLastPage = false;
+        isLoading = false;
         pool.Clear();
         content.anchoredPosition = Vector2.zero;
         popupPanel.SetActive(false);
