@@ -6,8 +6,7 @@ public class FinishedState : IQuizState
 {
     public void Enter(QuizManager quizManager)
     {
-        quizManager.finishedPanel.SetActive(true);
-        quizManager.finalScoreText.text = "Final Score: " + quizManager.finalscore.ToString();
+        GameManager.Instance.ShowGameOver(quizManager.finalscore);
     }
 
     public void Exit(QuizManager quizManager)

@@ -97,16 +97,6 @@ public class QuizManager : MonoBehaviour
     }
     
 
-    public void ReturnToMainMenu()
-    {
-        SceneManager.LoadScene("MainMenu");
-    }
-
-    public void RestartQuiz()
-    {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-
     public void OnAnswerButtonClicked(int index)
     {
         currentState?.OnAnswerSelected(this, index);

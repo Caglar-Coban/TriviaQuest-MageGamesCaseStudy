@@ -14,7 +14,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
   m_GroupName: Default Local Group
   m_GUID: 8632cbef2e97b4b4d9a5edc14dd0a605
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 1ff898f6d5889412bbc9b5d108c05a2c
+    m_Address: Assets/_Project/Prefabs/Views/LeaderBoardPop.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5c71e5e88b6db44969d2a52f5e7f6deb
+    m_Address: "Assets/_Project/Prefabs/Views/Canvas_MaI\u0307nMenu.prefab"
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b69f7878d3e984405a94a4f8a4918df8
+    m_Address: Assets/_Project/Prefabs/Views/Canvas_GameOver.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: eb908293dc6544e24973a285d6e526e7
+    m_Address: Assets/_Project/Prefabs/Views/Canvas_GamePlay.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: f4faaef5699e04b9289ee69c0df574a3, type: 2}
   m_SchemaSet:

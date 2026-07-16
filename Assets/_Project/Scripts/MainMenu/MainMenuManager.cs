@@ -2,14 +2,15 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 public class MainMenuManager : MonoBehaviour
 {
-    public LeaderBoardPopUp LeaderBoardPopup ;
+
     public void PlayButtonClicked()
     {
-        SceneManager.LoadScene("GamePlay");
+        GameManager.Instance.ReleaseMainMenu();
+        GameManager.Instance.ShowGamePlay();
     }
 
     public void LeaderBoardButttonClicked()
     {
-        LeaderBoardPopup.Open();
+        GameManager.Instance.ShowLeaderboard();
     }
 }

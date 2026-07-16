@@ -6,7 +6,6 @@ using UnityEngine.UI;
 
 public class LeaderBoardPopUp : MonoBehaviour
 {
-    public GameObject popupPanel;
     public RectTransform content;
     public List<LeaderBoardItem> pool;
     public float itemHeight = 100f;
@@ -19,7 +18,7 @@ public class LeaderBoardPopUp : MonoBehaviour
     
     public ScrollRect scrollRect;
 
-
+    public GameManager gameManager;
     public int lastvisibleindex;
     private int firstDataIndex;
     private bool isLoading = false;
@@ -39,14 +38,16 @@ public class LeaderBoardPopUp : MonoBehaviour
     private void Awake()
     {
         apiService = new ApiService(gameConfig); 
-    }
-
-    public void Open()
-    {
-        popupPanel.SetActive(true);
+        apiService = new ApiService(gameConfig);
+        content.anchoredPosition = Vector2.zero;
+        firstVisibleToUser = 0;
+        lastVisibleToUser = 0;
         CheckAndLoadVisiblePages();
     }
-
+    public void CloseButtonClicked()
+    {
+        GameManager.Instance.ReleaseLeaderboard();
+    }
     private void OnPageLoaded(int loadedPageNum, LeaderboardPage page)
     {
         loadingPages.Remove(loadedPageNum);
@@ -74,27 +75,6 @@ public class LeaderBoardPopUp : MonoBehaviour
         Debug.LogError(message);
         isLoading = false;
     }
-
-    public void Close()
-    {
-        pageCache.Clear();
-        loadingPages.Clear();
-        totalItemCount = 0;
-        Debug.Log("[Leaderboard] Closing Popup. Cleared cache and reset total item count.");
-        
-        foreach (var item in pool)
-        {
-            Destroy(item.gameObject);
-        }
-        
-        pagenumber = 0;
-        isLastPage = false;
-        isLoading = false;
-        pool.Clear();
-        content.anchoredPosition = Vector2.zero;
-        popupPanel.SetActive(false);
-    }
-
     public void RefreshVisibleItems()
     {
         int rawFirstIndex = Mathf.FloorToInt(content.anchoredPosition.y / (itemHeight + spacing));
