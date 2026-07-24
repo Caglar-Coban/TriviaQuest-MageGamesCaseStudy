@@ -1,8 +1,8 @@
-using System;
-using System.Collections;
+using System.Threading;
+using System.Threading.Tasks;
 
 public interface IApiService
 {
-    IEnumerator GetLeaderBoard(int page, Action <LeaderboardPage> onSuccess, Action <string> onError);
-    IEnumerator GetQuestions(Action <QuestionData> onSuccess, Action <string> onError);
+    Task<LeaderboardPage> GetLeaderBoard(int page, CancellationToken token);
+    Task<QuestionData> GetQuestions(CancellationToken token);
 }

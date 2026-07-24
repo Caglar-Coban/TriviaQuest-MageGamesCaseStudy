@@ -1,6 +1,10 @@
+using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using System;
+
 
 public class GameManager : MonoBehaviour
 {
@@ -21,18 +25,10 @@ public class GameManager : MonoBehaviour
     private GameObject _gameOverInstance;
 
 
-    private bool _isLeaderboardLoading = false;
-    private bool _leaderboardCancelled = false;
-
-    private bool _isMainmenuLoading = false;
-    private bool _mainmenuCancelled = false;
-
-    private bool _isGameplayLoading = false;
-    private bool _gameplayCancelled = false;
-
-    private bool _isGameoverLoading = false;
-
-    private bool _gameoverCancelled = false;
+    private CancellationTokenSource _mainMenuCts;
+    private CancellationTokenSource _leaderboardCts;
+    private CancellationTokenSource _gamePlayCts;
+    private CancellationTokenSource _gameOverCts;
 
     public static GameManager Instance { get; private set; }
 
@@ -52,162 +48,183 @@ public class GameManager : MonoBehaviour
     {
         ShowMainMenu();
     }
-
-    public void ShowMainMenu()
+    //-------------------------------------------------------------------------------------------
+    public async void ShowMainMenu()
     {
-        _isMainmenuLoading = true;
-        _mainMenuHandle = mainMenuRef.InstantiateAsync();
-            _mainMenuHandle.Completed += handle =>
-            {
-                _isMainmenuLoading = false;
-                if (_mainmenuCancelled)
-                {
-                    Addressables.ReleaseInstance(handle);
-                    _mainmenuCancelled = false;
-                    return;
-                }
+        if (_mainMenuHandle.IsValid())
+        {
+            return;
+        }
+        _mainMenuCts = new CancellationTokenSource();
+        try
+        {
+            _mainMenuHandle = mainMenuRef.InstantiateAsync();
+            _mainMenuInstance = await _mainMenuHandle.Task;
 
-                if(handle.Status == AsyncOperationStatus.Succeeded)
-                {
-                    _mainMenuInstance = handle.Result;
-                }
-                else
-                {
-                    Debug.LogError("Failed to load Main Menu: " + handle.OperationException);
-                    Addressables.Release(handle);
-                }
-            };
+
+            _mainMenuCts.Token.ThrowIfCancellationRequested();
+        }
+        catch (OperationCanceledException)
+        {
+            Addressables.ReleaseInstance(_mainMenuHandle);
+            _mainMenuInstance = null;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Main Menu yüklenemedi: {ex.Message}");
+            if (_mainMenuHandle.IsValid())
+            {
+                Addressables.Release(_mainMenuHandle);
+            } 
+        }
         
     }
     public void ReleaseMainMenu()
     {
-         if (_isMainmenuLoading)
+        _mainMenuCts?.Cancel();
+        _mainMenuCts?.Dispose();
+        _mainMenuCts = null;
+
+        if (_mainMenuHandle.IsValid())
         {
-            _mainmenuCancelled= true;
-            return;
+            Addressables.ReleaseInstance(_mainMenuHandle);
+            _mainMenuInstance = null;
         }
-        Addressables.ReleaseInstance(_mainMenuHandle);
-        _mainMenuInstance = null;
+    
         
     }
 
-
-    public void ShowLeaderboard()
+    //-------------------------------------------------------------------------------------------
+    public async void ShowLeaderboard()
     {
-        _isLeaderboardLoading = true;
-        _leaderboardHandle = leaderboardRef.InstantiateAsync(_mainMenuInstance.transform); 
-        _leaderboardHandle.Completed += handle =>
+        if (_leaderboardHandle.IsValid()) return;
+
+        _leaderboardCts = new CancellationTokenSource();
+
+        try
         {
-            _isLeaderboardLoading = false;
+            _leaderboardHandle = leaderboardRef.InstantiateAsync(_mainMenuInstance.transform);
+            _leaderboardInstance = await _leaderboardHandle.Task;
 
-            if (_leaderboardCancelled)
-            {
-                Addressables.ReleaseInstance(handle);
-                _leaderboardCancelled = false;
-                return;
-            }
+            _leaderboardCts.Token.ThrowIfCancellationRequested();
 
-            if (handle.Status == AsyncOperationStatus.Succeeded)
-            {
-                _leaderboardInstance = handle.Result;
-                _leaderboardInstance.transform.SetAsLastSibling();
-            }
-            else
-            {
-                Debug.LogError("Failed to load Leaderboard: " + handle.OperationException);
-                Addressables.Release(handle);
-            }
-        };
+            _leaderboardInstance.transform.SetAsLastSibling();
+        }
+        catch (OperationCanceledException)
+        {
+            Addressables.ReleaseInstance(_leaderboardHandle);
+            _leaderboardInstance = null;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Leaderboard yüklenemedi: {ex.Message}");
+            if (_leaderboardHandle.IsValid()) Addressables.Release(_leaderboardHandle);
+        }
     }
 
     public void ReleaseLeaderboard()
     {
-        if (_isLeaderboardLoading)
+        _leaderboardCts?.Cancel();
+        _leaderboardCts?.Dispose();
+        _leaderboardCts = null;
+
+        if (_leaderboardHandle.IsValid())
         {
-            _leaderboardCancelled = true;
-            return;
+            Addressables.ReleaseInstance(_leaderboardHandle);
+            _leaderboardInstance = null;
         }
-        Addressables.ReleaseInstance(_leaderboardHandle);
-        _leaderboardInstance = null;
     }
 
-    public void ShowGamePlay()
+
+    //-------------------------------------------------------------------------------------------
+
+
+    public async void ShowGamePlay()
     {
-        _isGameplayLoading = true;
-        _gamePlayHandle = gamePlayRef.InstantiateAsync();
-        _gamePlayHandle.Completed += handle =>
-        {
-            _isGameplayLoading = false;
-            if (_gameplayCancelled)
-            {
-                Addressables.ReleaseInstance(handle);
-                _gameplayCancelled = false;
-                return;
-            }
-            if (handle.Status == AsyncOperationStatus.Succeeded)
-            {
-                _gamePlayInstance = handle.Result;
-            }
-            else
-            {
-                Debug.LogError("Failed to load Game Play: " + handle.OperationException);
-                Addressables.Release(handle);
-            }
-        };
+        if (_gamePlayHandle.IsValid()) return;
 
-        
+        _gamePlayCts = new CancellationTokenSource();
+
+        try
+        {
+            _gamePlayHandle = gamePlayRef.InstantiateAsync();
+            _gamePlayInstance = await _gamePlayHandle.Task;
+
+            _gamePlayCts.Token.ThrowIfCancellationRequested();
+        }
+        catch (OperationCanceledException)
+        {
+            Addressables.ReleaseInstance(_gamePlayHandle);
+            _gamePlayInstance = null;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Game Play yüklenemedi: {ex.Message}");
+            if (_gamePlayHandle.IsValid()) Addressables.Release(_gamePlayHandle);
+        }
     }
-    
+
     public void ReleaseGamePlay()
     {
-        if (_isGameplayLoading )
-        {
-            _gameplayCancelled = true;
-            return;
+        _gamePlayCts?.Cancel();
+        _gamePlayCts?.Dispose();
+        _gamePlayCts = null;
 
+        if (_gamePlayHandle.IsValid())
+        {
+            Addressables.ReleaseInstance(_gamePlayHandle);
+            _gamePlayInstance = null;
         }
-        Addressables.ReleaseInstance(_gamePlayHandle);
-        _gamePlayInstance = null;
     }
 
-    public void ShowGameOver(int score)
+    //-------------------------------------------------------------------------------------------
+
+    public async void ShowGameOver(int score)
     {
-        _isGameoverLoading = true;
-        _gameOverHandle = gameOverRef.InstantiateAsync(_gamePlayInstance.transform);
-        _gameOverHandle.Completed += handle =>
-        {
-            _isGameoverLoading = false;
-            if (_gameoverCancelled)
-            {
-                Addressables.ReleaseInstance(handle);
-                _gameoverCancelled = false;
-                return;
+        if (_gameOverHandle.IsValid()) return;
 
-            }
-            if (handle.Status == AsyncOperationStatus.Succeeded)
-            {
-                _gameOverInstance = handle.Result;
-                _gameOverInstance.transform.SetAsLastSibling();
-                _gameOverInstance.GetComponent<GameOverUI>().SetScore(score);
-            }
-            else
-            {
-                Debug.LogError("Failed to load Game Over: " + handle.OperationException);
-                Addressables.Release(handle);
-            }
-        };
+        _gameOverCts = new CancellationTokenSource();
+
+        try
+        {
+            _gameOverHandle = gameOverRef.InstantiateAsync(_gamePlayInstance.transform);
+            _gameOverInstance = await _gameOverHandle.Task;
+
+            _gameOverCts.Token.ThrowIfCancellationRequested();
+
+            _gameOverInstance.transform.SetAsLastSibling();
+            _gameOverInstance.GetComponent<GameOverUI>().SetScore(score);
+        }
+        catch (OperationCanceledException)
+        {
+            Addressables.ReleaseInstance(_gameOverHandle);
+            _gameOverInstance = null;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Game Over yüklenemedi: {ex.Message}");
+            if (_gameOverHandle.IsValid()) Addressables.Release(_gameOverHandle);
+        }
     }
+
     public void ReleaseGameOver()
     {
-        if (_isGameoverLoading)
+        _gameOverCts?.Cancel();
+        _gameOverCts?.Dispose();
+        _gameOverCts = null;
+
+        if (_gameOverHandle.IsValid())
         {
-            _gameoverCancelled = true;
-            return;
+            Addressables.ReleaseInstance(_gameOverHandle);
+            _gameOverInstance = null;
         }
-        Addressables.ReleaseInstance(_gameOverHandle);
-        _gameOverInstance = null;
     }
-    
+
+
+
+    //-------------------------------------------------------------------------------------------
+
+
     public void RestartGame()
     {
         ReleaseGameOver();

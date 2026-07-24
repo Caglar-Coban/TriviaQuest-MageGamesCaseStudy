@@ -3,6 +3,9 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Collections;
 using UnityEngine.UI;
+using System.Threading.Tasks;
+using System.Threading;
+using System;
 
 public class LeaderBoardPopUp : MonoBehaviour
 {
@@ -34,19 +37,38 @@ public class LeaderBoardPopUp : MonoBehaviour
     private int lastVisibleToUser;
     private int firstVisibleToUser;
     
+
+    private CancellationTokenSource _cancellationTokenSource;
     
     private void Awake()
     {
         apiService = new ApiService(gameConfig); 
-        apiService = new ApiService(gameConfig);
         content.anchoredPosition = Vector2.zero;
         firstVisibleToUser = 0;
         lastVisibleToUser = 0;
+
+        _cancellationTokenSource = new CancellationTokenSource();
+
         CheckAndLoadVisiblePages();
     }
     public void CloseButtonClicked()
     {
+
+        if(_cancellationTokenSource != null)
+        {
+            _cancellationTokenSource.Cancel();
+        }
         GameManager.Instance.ReleaseLeaderboard();
+    }
+
+    private void OnDestroy()
+    {
+        if (_cancellationTokenSource != null)
+        {
+        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();  
+        }
+    
     }
     private void OnPageLoaded(int loadedPageNum, LeaderboardPage page)
     {
@@ -68,12 +90,6 @@ public class LeaderBoardPopUp : MonoBehaviour
         UpdateContentSize();
         EnsurePoolSize();
         RefreshVisibleItems();
-    }
-
-    private void OnError(string message)
-    {
-        Debug.LogError(message);
-        isLoading = false;
     }
     public void RefreshVisibleItems()
     {
@@ -181,7 +197,7 @@ public class LeaderBoardPopUp : MonoBehaviour
             {
                 loadingPages.Add(page);
                 Debug.Log($"[Leaderboard] + page {page} loading...");
-                StartCoroutine(apiService.GetLeaderBoard(page, (pageData) => OnPageLoaded(page, pageData), OnError));
+                LoadPageData(page);
             }
         }
 
@@ -199,6 +215,24 @@ public class LeaderBoardPopUp : MonoBehaviour
         {
             pageCache.Remove(page);
             Debug.Log($"page {page} deleted from cache");
+        }
+    }
+
+    private async void LoadPageData(int page)
+    {
+        try
+        {
+            LeaderboardPage pagedata = await apiService.GetLeaderBoard(page,_cancellationTokenSource.Token);
+            OnPageLoaded(page,pagedata);
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.Log("Download cancelled");
+        }
+        catch(Exception ex)
+        {
+            Debug.LogError($"Problem Occurred : {ex.Message}");
+            loadingPages.Remove(page);
         }
     }
 }

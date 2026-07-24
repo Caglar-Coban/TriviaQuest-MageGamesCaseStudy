@@ -5,6 +5,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 using UnityEngine.SceneManagement;
+using System.Threading;
+using System.Threading.Tasks;
 public class QuizManager : MonoBehaviour
 {
     public TextMeshProUGUI questionText;
@@ -22,6 +24,7 @@ public class QuizManager : MonoBehaviour
     public GameObject finishedPanel;
     public TMP_Text finalScoreText;
     public event Action<int> OnScoreChanged;
+    private CancellationTokenSource _cancellationTokenSource;
     private void Awake()
     {
         apiService = new ApiService(gameConfig); 
@@ -29,14 +32,32 @@ public class QuizManager : MonoBehaviour
     }
     
     
-    public void Start()
+    public async void Start()
     {
         for (int i = 0; i < answerButtons.Count; i++)
         {
             int capturedIndex = i; 
             answerButtons[i].onClick.AddListener(() => OnAnswerButtonClicked(capturedIndex));
         }
-        StartCoroutine(apiService.GetQuestions(OnQuestionsLoaded, OnError));
+        _cancellationTokenSource = new CancellationTokenSource();
+
+        try
+        {
+            ChangeState(new LoadingState());
+
+            questions = await apiService.GetQuestions(_cancellationTokenSource.Token);
+            
+            ChangeState(new WaitingForAnswerState());
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.Log("Download cancelled");
+        }
+        catch(Exception ex)
+        {
+            Debug.LogError($"Problem Occurred : {ex.Message}");
+        }
+
     }
 
     public void ChangeState(IQuizState newState)
@@ -44,16 +65,6 @@ public class QuizManager : MonoBehaviour
         currentState?.Exit(this);
         currentState = newState;
         currentState?.Enter(this);
-    }
-    public void OnQuestionsLoaded(QuestionData questionData)
-    {
-        questions = questionData;
-        ChangeState(new WaitingForAnswerState());
-    }
-
-    public void OnError(string message)
-    {
-        Debug.LogError(message);
     }
 
     public void DisplayQuestion(int index)
@@ -107,6 +118,14 @@ public class QuizManager : MonoBehaviour
         finalscore += scoreChange;
         OnScoreChanged?.Invoke(scoreChange);
     }
+
+    private void OnDestroy()
+    {
+        if (_cancellationTokenSource != null)
+        {
+        _cancellationTokenSource.Cancel();
+        _cancellationTokenSource.Dispose();  
+        }
     
-    
+    }
 }

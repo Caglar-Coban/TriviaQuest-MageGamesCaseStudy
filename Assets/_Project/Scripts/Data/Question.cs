@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 [Serializable]
 public class Question
@@ -26,9 +27,13 @@ public class Question
             {
                 return 2 ;
             }
-            else
+            else if (answer  == "D")
             {
                 return 3;
+            }
+            else
+            {
+                return -1;
             }
 
         }

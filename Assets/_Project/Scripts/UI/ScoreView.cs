@@ -1,6 +1,8 @@
 using UnityEngine;
 using TMPro;
-using System.Collections;
+using System.Threading;
+using System.Threading.Tasks;
+using System;
 public class ScoreView : MonoBehaviour
 {
     public TextMeshProUGUI scoreText;
@@ -8,7 +10,9 @@ public class ScoreView : MonoBehaviour
     public GameConfig gameConfig;
     public float animationDuration;
     public int currentScore ;
-    public Coroutine currentAnimation;
+    private CancellationTokenSource _cancellationTokenSource;
+
+
 
     public void Start()
     {
@@ -30,27 +34,49 @@ public class ScoreView : MonoBehaviour
     {
         int targetScore = currentScore + score;
 
-        if (currentAnimation != null)
+        if (_cancellationTokenSource != null)
         {
-            StopCoroutine(currentAnimation);
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
         }
-        currentAnimation = StartCoroutine(AnimateScoreChange(currentScore, targetScore));
+        _cancellationTokenSource = new CancellationTokenSource();
+        AnimateScoreChange(currentScore,targetScore, _cancellationTokenSource.Token);
         currentScore = targetScore;
     }
 
-    private IEnumerator AnimateScoreChange(int startScore, int targetScore)
+    private async void AnimateScoreChange(int startScore, int targetScore, CancellationToken token)
     {
-        
+        try{
         float elapsedTime = 0f;
         while (elapsedTime < animationDuration)
         {
+            token.ThrowIfCancellationRequested();
+
             elapsedTime += Time.deltaTime;
             float t = Mathf.Clamp01(elapsedTime / animationDuration);
             int displayedScore = Mathf.RoundToInt(Mathf.Lerp(startScore, targetScore, t));
             scoreText.text = displayedScore.ToString();
-            yield return null;
+            
+            await Task.Yield();
         }
         scoreText.text = targetScore.ToString();
-        
     }
+        catch (OperationCanceledException)
+        {
+            
+        }
+        catch(Exception ex)
+        {
+            Debug.LogError($"Problem Occurred : {ex.Message}");
+        }
+    }
+
+    private void OnDestroy()
+{
+    if (_cancellationTokenSource != null)
+    {
+        _cancellationTokenSource.Cancel(); 
+        _cancellationTokenSource.Dispose(); 
+    }
+}
 }

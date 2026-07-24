@@ -1,8 +1,8 @@
 using System;
-using System.Collections;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
-
+using System.Threading;
 public class ApiService : IApiService
 {
     private readonly GameConfig _config;
@@ -11,81 +11,75 @@ public class ApiService : IApiService
         _config = config;
     }
 
-    public IEnumerator GetLeaderBoard(int page, Action <LeaderboardPage> onSuccess, Action <string> onError)
+    public async Task<LeaderboardPage> GetLeaderBoard(int page, CancellationToken token)
     {
         string url = string.Format(_config.leaderboardformaturl, page);
 
         using (UnityWebRequest courier = UnityWebRequest.Get(url))
         {
-            yield return courier.SendWebRequest();
+            var operation = courier.SendWebRequest();
 
-            if (courier.result == UnityWebRequest.Result.Success)
+            while (!operation.isDone)
             {
-
-                try
+                if (token.IsCancellationRequested)
                 {
-                    string textjson = courier.downloadHandler.text;
-
-                    LeaderboardPage pagedata= JsonUtility.FromJson<LeaderboardPage>(textjson);
-
-
-                    onSuccess?.Invoke(pagedata);
-
+                    courier.Abort();
+                    token.ThrowIfCancellationRequested();
                 }
-                catch
-                {
-                    onError?.Invoke("Couldn't received Api data LeaderBoard -- translate error");
-                }
-                
-                
+                await Task.Yield();
+            }
+
+            if (courier.result != UnityWebRequest.Result.Success)
+            {
+                throw new Exception("API Connection Error");
 
             }
-            else
+
+            if (courier.downloadHandler == null || string.IsNullOrEmpty(courier.downloadHandler.text))
             {
-                Debug.Log("Couldn't received Api data LeaderBoard " + courier.error);
+                throw new Exception("DownloadHandler text is null or empty.");
             }
+
+            string textjson = SanitizeJson(courier.downloadHandler.text);
+            return JsonUtility.FromJson<LeaderboardPage>(textjson);
         }
         
     }
-    public IEnumerator GetQuestions(Action <QuestionData> onSuccess, Action <string> onError)
+    public async Task<QuestionData> GetQuestions(CancellationToken token)
     {
 
         string url = _config.questionformaturl;
 
         using (UnityWebRequest courier = UnityWebRequest.Get(url))
         {
-            yield return courier.SendWebRequest();
+            var operation = courier.SendWebRequest();
 
-            if (courier.result == UnityWebRequest.Result.Success)
+
+            while (!operation.isDone)
             {
-                QuestionData textdata = null;
-                try
+                if (token.IsCancellationRequested)
                 {
-                    if (courier.downloadHandler == null || string.IsNullOrEmpty(courier.downloadHandler.text))
-                    {
+                    courier.Abort();
+                    token.ThrowIfCancellationRequested();
+                }
+                await Task.Yield();
+            }
+            if (courier.result != UnityWebRequest.Result.Success)
+            {
+                throw new Exception("API Connection Error");
+
+            }
+
+            if (courier.downloadHandler == null || string.IsNullOrEmpty(courier.downloadHandler.text))
+                {
                         throw new Exception("DownloadHandler text is null or empty.");
-                    }
-                    
-                    string textjson = courier.downloadHandler.text;
-                    textjson = SanitizeJson(textjson);
-                    textdata = JsonUtility.FromJson<QuestionData>(textjson);
-
-                    
                 }
 
-                catch (Exception e)
-                {
-                    Debug.LogError("PARSE ERROR: " + e.Message);
-                    onError?.Invoke("Couldn't received Api data QuestionData -- translate error");
+            
+            
 
-                }
-                onSuccess?.Invoke(textdata);
-
-            }
-            else
-            {
-                Debug.Log("Couldn't received Api data Questions " + courier.error);
-            }
+            string textjson = SanitizeJson(courier.downloadHandler.text);
+            return JsonUtility.FromJson<QuestionData>(textjson);
         }
     
     }
